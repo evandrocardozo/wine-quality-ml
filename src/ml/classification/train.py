@@ -6,6 +6,10 @@ https://docs.databricks.com/aws/en/getting-started/ml-get-started.html
 Reads from the gold feature table this bundle builds and runs as a Job task on
 serverless compute instead of interactively in a notebook.
 
+One deliberate divergence from the tutorial: Optuna trials run sequentially on the
+driver rather than distributed via MlflowSparkStudy, which cannot authenticate to
+MLflow from serverless executors. See the comment on the study block below.
+
 Part 4 of the tutorial (deploying a serving endpoint) is UI-driven in the notebook,
 so there's no script to port -- see resources/model_serving.yml for the
 infra-as-code equivalent instead.
@@ -20,8 +24,6 @@ import argparse
 import mlflow
 import mlflow.sklearn
 import optuna
-from mlflow.optuna.storage import MlflowStorage
-from mlflow.pyspark.optuna.study import MlflowSparkStudy
 from mlflow.tracking import MlflowClient
 from pyspark.sql import SparkSession
 from sklearn.ensemble import GradientBoostingClassifier
@@ -35,11 +37,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--catalog", required=True)
     parser.add_argument("--schema", required=True)
+    parser.add_argument("--experiment-path", required=True)
     parser.add_argument("--n-trials", type=int, default=32)
     args = parser.parse_args()
 
     spark = SparkSession.builder.getOrCreate()
     mlflow.set_registry_uri("databricks-uc")
+
+    # Required, not optional, for a spark_python_task. A notebook infers its
+    # experiment from its own workspace path; a plain .py file has none, so
+    # mlflow.start_run() resolves experiment_id to None and the run fails with
+    # "RESOURCE_DOES_NOT_EXIST: Could not find experiment with ID None".
+    mlflow.set_experiment(args.experiment_path)
+
     client = MlflowClient()
 
     table = f"{args.catalog}.{args.schema}.gold_wine_features"
@@ -63,7 +73,6 @@ def main() -> None:
 
     # --- Part 2 of the tutorial: Optuna hyperparameter search -------------------
     def objective(trial: optuna.Trial) -> float:
-        mlflow.sklearn.autolog()  # re-enable on each worker
         with mlflow.start_run(nested=True):
             params = {
                 "n_estimators": trial.suggest_int("n_estimators", 20, 1000),
@@ -76,14 +85,17 @@ def main() -> None:
             model.fit(X_train, y_train)
             auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
             mlflow.log_metric("test_auc", auc)
-            # Optuna minimizes by default -- negate since we want to maximize AUC.
-            return -auc
+            return auc
 
+    # Driver-side Optuna, not MlflowSparkStudy. Distributing trials across Spark
+    # executors fails on serverless: the executors have no Databricks credentials,
+    # so MLflow artifact logging dies with "default auth: cannot configure default
+    # credentials". Trials run sequentially on the driver instead.
     with mlflow.start_run(run_name="gb_optuna"):
-        experiment_id = mlflow.active_run().info.experiment_id
-        storage = MlflowStorage(experiment_id=experiment_id)
-        study = MlflowSparkStudy(study_name="gb-optuna-tuning", storage=storage)
-        study.optimize(objective, n_trials=args.n_trials, n_jobs=4)
+        study = optuna.create_study(
+            direction="maximize", study_name="gb-optuna-tuning"
+        )
+        study.optimize(objective, n_trials=args.n_trials)
 
     # --- Search runs to retrieve the best model ---------------------------------
     best_run = mlflow.search_runs(

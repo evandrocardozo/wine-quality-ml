@@ -22,6 +22,10 @@ resources:
               - "${var.catalog}"
               - "--schema"
               - "${var.schema}"
+              # MLflow cannot infer an experiment for a spark_python_task, so the
+              # bundle names one explicitly, per-target.
+              - "--experiment-path"
+              - "/Users/${workspace.current_user.userName}/${bundle.name}_${bundle.target}"
           environment_key: default   # required for spark_python_task on serverless
 
       # scikit-learn, optuna and mlflow's optuna integration aren't in the base
