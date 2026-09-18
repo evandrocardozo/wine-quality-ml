@@ -9,8 +9,10 @@ resources:
       # in databricks.yml already sets it. Writing `${bundle.target == "dev"}` produced
       # the string "true"/"false" rather than a bool, which fails `validate --strict`.
       libraries:
+        # Trailing `**` only — the pipelines API rejects `**/*.py` with
+        # "Single asterisk glob pattern is not supported in included path".
         - glob:
-            include: ../src/pipelines/**/*.py
+            include: ../src/pipelines/**
       configuration:
         pipelines.trigger.interval: "1 hour"
       # No `clusters:` block: serverless pipelines reject manual compute settings.

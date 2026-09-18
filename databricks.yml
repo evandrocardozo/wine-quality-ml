@@ -18,20 +18,20 @@ targets:
     workspace:
       host: https://dbc-90098d3d-a1d9.cloud.databricks.com
     variables:
-      catalog: dev_catalog        # or wine_quality_dev if single-workspace-catalog-per-env
+      catalog: wine_quality_dev
 
   staging:
     mode: production
     workspace:
       host: https://<staging-workspace-host>
     variables:
-      catalog: staging_catalog
+      catalog: wine_quality_staging   # not created yet — staging workspace is still a placeholder
 
   prod:
     mode: production
     workspace:
       host: https://<prod-workspace-host>
     variables:
-      catalog: prod_catalog
+      catalog: wine_quality_prod      # not created yet — prod workspace is still a placeholder
     run_as:
       service_principal_name: <prod-service-principal>
