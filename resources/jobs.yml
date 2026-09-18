@@ -26,6 +26,9 @@ resources:
 
       # scikit-learn, optuna and mlflow's optuna integration aren't in the base
       # serverless image, so they're declared here rather than assumed present.
+      # mlflow must be pinned to 3.x explicitly: environment_version "2" ships an
+      # older mlflow, and train.py imports mlflow.optuna.storage /
+      # mlflow.pyspark.optuna.study, which only exist in MLflow 3.
       environments:
         - environment_key: default
           spec:
@@ -33,7 +36,4 @@ resources:
             dependencies:
               - scikit-learn
               - optuna
-
-      email_notifications:
-        on_failure:
-          - "{{ALERT_EMAIL}}"
+              - mlflow>=3.1.0
