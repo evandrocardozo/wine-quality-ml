@@ -19,8 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     env:
-      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_STAGING_CLIENT_ID }}
-      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_STAGING_CLIENT_SECRET }}
+      # PAT auth; host comes from databricks.yml. CLAUDE.md prefers a per-environment
+      # service principal here — revisit before this carries real client data.
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_STAGING_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -44,8 +45,9 @@ jobs:
     # unattended as soon as a release is published.
     environment: prod
     env:
-      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_PROD_CLIENT_ID }}
-      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_PROD_CLIENT_SECRET }}
+      # PAT auth; host comes from databricks.yml. CLAUDE.md prefers a per-environment
+      # service principal here — revisit before this carries real client data.
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PROD_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 

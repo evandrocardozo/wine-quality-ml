@@ -47,7 +47,8 @@ jobs:
       - name: databricks bundle validate -t dev
         run: databricks bundle validate --strict -t dev
         env:
-          # OAuth M2M for the dev service principal. The workspace host comes from
-          # databricks.yml, so only credentials are injected here.
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_DEV_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_DEV_CLIENT_SECRET }}
+          # PAT auth. The workspace host comes from databricks.yml, so only the token
+          # is injected here. This ties CI to whoever minted the token rather than to a
+          # per-environment service principal — see CLAUDE.md's CI/CD section, which
+          # prefers separate service principals once this is past demo stage.
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_DEV_TOKEN }}

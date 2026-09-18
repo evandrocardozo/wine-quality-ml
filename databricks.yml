@@ -16,7 +16,7 @@ targets:
     mode: development
     default: true
     workspace:
-      host: https://<dev-workspace-host>
+      host: https://dbc-90098d3d-a1d9.cloud.databricks.com
     variables:
       catalog: dev_catalog        # or wine_quality_dev if single-workspace-catalog-per-env
 
