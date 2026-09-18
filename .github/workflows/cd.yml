@@ -1,0 +1,57 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+# Deploys must not overlap or cancel each other — a half-applied bundle is worse
+# than a queued one.
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    name: Deploy to staging
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      # PAT auth; host comes from databricks.yml. CLAUDE.md prefers a per-environment
+      # service principal here — revisit before this carries real client data.
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_STAGING_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: databricks/setup-cli@main
+
+      - name: Deploy bundle
+        run: databricks bundle deploy -t staging
+
+      # Integration test: run the real job DAG end to end against staging data and
+      # fail the deploy if the pipeline or the training task errors. Expectations
+      # declared on the silver table (expect_or_fail) surface here.
+      - name: Integration test — run job DAG
+        run: databricks bundle run wine_quality_daily_job -t staging
+
+  deploy-prod:
+    name: Deploy to prod
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    # Manual approval gate. This relies on the `prod` environment being configured in
+    # Settings > Environments with required reviewers — without that, the job deploys
+    # unattended as soon as a release is published.
+    environment: prod
+    env:
+      # PAT auth; host comes from databricks.yml. CLAUDE.md prefers a per-environment
+      # service principal here — revisit before this carries real client data.
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PROD_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: databricks/setup-cli@main
+
+      - name: Deploy bundle
+        run: databricks bundle deploy -t prod

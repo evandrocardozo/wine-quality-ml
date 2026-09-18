@@ -1,0 +1,31 @@
+[project]
+name = "wine-quality-ml"
+version = "0.1.0"
+description = "Databricks end-to-end MLOps pipeline for wine quality classification"
+requires-python = ">=3.11"
+dependencies = []
+
+# Nothing here is installed on Databricks compute: the serverless pipeline image already
+# ships pyspark, and job-level extras (scikit-learn, optuna) are declared in
+# resources/jobs.yml. These are local/CI-only tools for linting and running unit tests.
+[dependency-groups]
+dev = [
+    "pyspark>=4.0.0",
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+# No build backend needed — this repo is deployed as a bundle, not installed as a package.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# The pipeline modules reference the pipeline-injected `spark` global, which ruff
+# cannot see a definition for.
+"src/pipelines/**/*.py" = ["F821"]

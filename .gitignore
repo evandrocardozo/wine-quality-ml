@@ -1,0 +1,19 @@
+# Databricks CLI / IDE extension local state — per-developer, never shared
+.databricks/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local SparkSession artifacts created by the unit tests
+spark-warehouse/
+metastore_db/
+derby.log
+
+# OS / editor
+.DS_Store

@@ -1,0 +1,37 @@
+bundle:
+  name: wine_quality_ml       # rename to {{CASE_CODENAME}} for a real case
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog this target writes to
+  schema:
+    description: Schema holding bronze/silver/gold tables + the registered model
+    default: wine_quality
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-90098d3d-a1d9.cloud.databricks.com
+    variables:
+      catalog: dev_catalog        # or wine_quality_dev if single-workspace-catalog-per-env
+
+  staging:
+    mode: production
+    workspace:
+      host: https://<staging-workspace-host>
+    variables:
+      catalog: staging_catalog
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<prod-workspace-host>
+    variables:
+      catalog: prod_catalog
+    run_as:
+      service_principal_name: <prod-service-principal>
