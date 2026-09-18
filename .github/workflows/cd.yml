@@ -25,15 +25,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Staging is not stood up yet: databricks.yml still carries a
+      # <staging-workspace-host> placeholder and DATABRICKS_STAGING_TOKEN does not
+      # exist. Rather than fail every merge to main on an auth error, skip the
+      # deploy until both are real. The `secrets` context is not available to `if:`
+      # at any level, but `env` is available to step-level `if:` — hence the check
+      # against the env var set from the secret above.
+      - name: Warn that staging is not configured
+        if: env.DATABRICKS_TOKEN == ''
+        run: |
+          echo "::warning title=Staging deploy skipped::DATABRICKS_STAGING_TOKEN is unset, so the staging deploy and integration test did not run. To enable: replace the <staging-workspace-host> placeholder in databricks.yml and add the secret."
+
       - uses: databricks/setup-cli@main
+        if: env.DATABRICKS_TOKEN != ''
 
       - name: Deploy bundle
+        if: env.DATABRICKS_TOKEN != ''
         run: databricks bundle deploy -t staging
 
       # Integration test: run the real job DAG end to end against staging data and
       # fail the deploy if the pipeline or the training task errors. Expectations
       # declared on the silver table (expect_or_fail) surface here.
       - name: Integration test — run job DAG
+        if: env.DATABRICKS_TOKEN != ''
         run: databricks bundle run wine_quality_daily_job -t staging
 
   deploy-prod:
@@ -50,6 +64,16 @@ jobs:
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PROD_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
+      # Deliberately NOT skipped the way staging is. Publishing a release and
+      # getting a green run that deployed nothing is worse than a failure, so this
+      # fails loudly — just with an actionable message instead of the CLI's
+      # "cannot configure default credentials".
+      - name: Require prod credentials
+        if: env.DATABRICKS_TOKEN == ''
+        run: |
+          echo "::error title=Prod deploy not configured::DATABRICKS_PROD_TOKEN is unset and databricks.yml still has the <prod-workspace-host> placeholder. Configure both before publishing a release."
+          exit 1
 
       - uses: databricks/setup-cli@main
 
