@@ -1,0 +1,16 @@
+resources:
+  pipelines:
+    wine_quality_pipeline:
+      name: wine_quality_pipeline_${bundle.target}
+      catalog: ${var.catalog}
+      target: ${var.schema}
+      serverless: true          # required for Free Edition / serverless-only workspaces
+      # No `development:` here — the target's `mode: development` / `mode: production`
+      # in databricks.yml already sets it. Writing `${bundle.target == "dev"}` produced
+      # the string "true"/"false" rather than a bool, which fails `validate --strict`.
+      libraries:
+        - glob:
+            include: ../src/pipelines/**/*.py
+      configuration:
+        pipelines.trigger.interval: "1 hour"
+      # No `clusters:` block: serverless pipelines reject manual compute settings.

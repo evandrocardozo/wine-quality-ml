@@ -1,0 +1,39 @@
+resources:
+  jobs:
+    wine_quality_daily_job:
+      name: wine_quality_daily_job_${bundle.target}
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"   # daily 06:00 UTC — {{REFRESH_CADENCE}}
+        timezone_id: UTC
+
+      tasks:
+        - task_key: run_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.wine_quality_pipeline.id}
+          # No cluster needed: serverless pipeline tasks always run on managed compute.
+
+        - task_key: train_and_register_model
+          depends_on:
+            - task_key: run_pipeline
+          spark_python_task:
+            python_file: ../src/ml/classification/train.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
+              - "--schema"
+              - "${var.schema}"
+          environment_key: default   # required for spark_python_task on serverless
+
+      # scikit-learn, optuna and mlflow's optuna integration aren't in the base
+      # serverless image, so they're declared here rather than assumed present.
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "2"
+            dependencies:
+              - scikit-learn
+              - optuna
+
+      email_notifications:
+        on_failure:
+          - "{{ALERT_EMAIL}}"
