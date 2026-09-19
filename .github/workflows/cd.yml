@@ -25,8 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Staging is not stood up yet: databricks.yml still carries a
-      # <staging-workspace-host> placeholder and DATABRICKS_STAGING_TOKEN does not
+      # Staging is not stood up yet: databricks.yml still carries a placeholder
+      # staging workspace host and DATABRICKS_STAGING_TOKEN does not
       # exist. Rather than fail every merge to main on an auth error, skip the
       # deploy until both are real. The `secrets` context is not available to `if:`
       # at any level, but `env` is available to step-level `if:` — hence the check
@@ -34,7 +34,7 @@ jobs:
       - name: Warn that staging is not configured
         if: env.DATABRICKS_TOKEN == ''
         run: |
-          echo "::warning title=Staging deploy skipped::DATABRICKS_STAGING_TOKEN is unset, so the staging deploy and integration test did not run. To enable: replace the <staging-workspace-host> placeholder in databricks.yml and add the secret."
+          echo "::warning title=Staging deploy skipped::DATABRICKS_STAGING_TOKEN is unset, so the staging deploy and integration test did not run. To enable: replace the placeholder staging workspace host in databricks.yml and add the secret."
 
       - uses: databricks/setup-cli@main
         if: env.DATABRICKS_TOKEN != ''
@@ -72,7 +72,7 @@ jobs:
       - name: Require prod credentials
         if: env.DATABRICKS_TOKEN == ''
         run: |
-          echo "::error title=Prod deploy not configured::DATABRICKS_PROD_TOKEN is unset and databricks.yml still has the <prod-workspace-host> placeholder. Configure both before publishing a release."
+          echo "::error title=Prod deploy not configured::DATABRICKS_PROD_TOKEN is unset and databricks.yml still has a placeholder prod workspace host. Configure both before publishing a release."
           exit 1
 
       - uses: databricks/setup-cli@main
